@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -41,13 +42,28 @@ public class InfluencerController {
 
     // Criar influencer (POST)
     @PostMapping
-    public ResponseEntity<InfluencerResponse> cadastrar(@RequestBody Influencer influencer) {
-        if (influencer.getSenha() == null || influencer.getSenha().isBlank()) {
-            return ResponseEntity.badRequest().build();
+    public ResponseEntity<?> cadastrar(@Valid @RequestBody Influencer influencer) {
+        try {
+            if (influencer.getSenha() == null || influencer.getSenha().isBlank()) {
+                return ResponseEntity.badRequest().body("Senha é obrigatória");
+            }
+            
+            // Check if email already exists
+            if (influencerRepository.findByEmail(influencer.getEmail()) != null) {
+                return ResponseEntity.badRequest().body("Email já está em uso");
+            }
+            
+            // Check if Instagram profile already exists
+            if (influencerRepository.findByPerfilInstagram(influencer.getPerfilInstagram()) != null) {
+                return ResponseEntity.badRequest().body("Perfil do Instagram já está em uso");
+            }
+            
+            influencer.setSenha(passwordEncoder.encode(influencer.getSenha()));
+            Influencer salvo = influencerRepository.save(influencer);
+            return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(salvo));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao cadastrar influencer: " + e.getMessage());
         }
-        influencer.setSenha(passwordEncoder.encode(influencer.getSenha()));
-        Influencer salvo = influencerRepository.save(influencer);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(salvo));
     }
 
     // Login
@@ -74,8 +90,6 @@ public class InfluencerController {
     // Listar todos
     @GetMapping
     public List<InfluencerResponse> getAllInfluencers() {
-        System.err.println("AAAAAAAAAAAAAAAAA");
-
         return influencerRepository.findAll()
                 .stream()
                 .map(this::toResponse)
@@ -85,8 +99,6 @@ public class InfluencerController {
     // Buscar por id
     @GetMapping("/{id}")
     public ResponseEntity<InfluencerResponse> getInfluencerById(@PathVariable Long id) {
-        System.err.println("OOOOOOOOOOOOOOOOOO");
-        
         return influencerRepository.findById(id)
                 .map(influencer -> ResponseEntity.ok(toResponse(influencer)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -94,16 +106,32 @@ public class InfluencerController {
 
     // Atualizar
     @PutMapping("/{id}")
-    public ResponseEntity<InfluencerResponse> updateInfluencer(@PathVariable Long id, @RequestBody Influencer updated) {
+    public ResponseEntity<?> updateInfluencer(@PathVariable Long id, @Valid @RequestBody Influencer updated) {
         return influencerRepository.findById(id).map(influencer -> {
-            influencer.setNome(updated.getNome());
-            influencer.setPerfilInstagram(updated.getPerfilInstagram());
-            influencer.setEmail(updated.getEmail());
-            if (updated.getSenha() != null && !updated.getSenha().isBlank()) {
-                influencer.setSenha(passwordEncoder.encode(updated.getSenha()));
+            try {
+                // Check if email is being changed and if new email already exists
+                if (!influencer.getEmail().equals(updated.getEmail()) && 
+                    influencerRepository.findByEmail(updated.getEmail()) != null) {
+                    return ResponseEntity.badRequest().body("Email já está em uso");
+                }
+                
+                // Check if Instagram profile is being changed and if new profile already exists
+                if (!influencer.getPerfilInstagram().equals(updated.getPerfilInstagram()) && 
+                    influencerRepository.findByPerfilInstagram(updated.getPerfilInstagram()) != null) {
+                    return ResponseEntity.badRequest().body("Perfil do Instagram já está em uso");
+                }
+                
+                influencer.setNome(updated.getNome());
+                influencer.setPerfilInstagram(updated.getPerfilInstagram());
+                influencer.setEmail(updated.getEmail());
+                if (updated.getSenha() != null && !updated.getSenha().isBlank()) {
+                    influencer.setSenha(passwordEncoder.encode(updated.getSenha()));
+                }
+                Influencer salvo = influencerRepository.save(influencer);
+                return ResponseEntity.ok(toResponse(salvo));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body("Erro ao atualizar influencer: " + e.getMessage());
             }
-            Influencer salvo = influencerRepository.save(influencer);
-            return ResponseEntity.ok(toResponse(salvo));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
