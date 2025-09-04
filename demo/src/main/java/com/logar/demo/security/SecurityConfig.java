@@ -28,16 +28,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-            .csrf().disable()
-            .authorizeHttpRequests()
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/influencers/login", "/api/influencers").permitAll()
                 .anyRequest().authenticated()
-            .and()
-            .httpBasic().disable()
-            .sessionManagement()
+            )
+            .httpBasic(httpBasic -> httpBasic.disable())
+            .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) // ✅ agora sim
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 

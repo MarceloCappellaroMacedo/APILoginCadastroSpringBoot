@@ -1,6 +1,7 @@
 package com.logar.demo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,15 +14,25 @@ public class Influencer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Nome é obrigatório")
+    @Size(max = 255, message = "Nome deve ter no máximo 255 caracteres")
     @Column(nullable = false, length = 255)
     private String nome;
 
+    @NotBlank(message = "Perfil do Instagram é obrigatório")
+    @Size(max = 255, message = "Perfil do Instagram deve ter no máximo 255 caracteres")
     @Column(name = "perfil_instagram", nullable = false, unique = true, length = 255)
     private String perfilInstagram;
 
+    @NotBlank(message = "Email é obrigatório")
+    @Email(message = "Email deve ter um formato válido")
+    @Size(max = 255, message = "Email deve ter no máximo 255 caracteres")
     @Column(nullable = false, unique = true, length = 255)
     private String email;
     
+    @NotBlank(message = "Senha é obrigatória")
+    @Size(min = 6, max = 255, message = "Senha deve ter entre 6 e 255 caracteres")
+    @JsonIgnore
     @Column(nullable = false, length = 255)
     private String senha;
 
